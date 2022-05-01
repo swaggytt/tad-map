@@ -3,11 +3,34 @@
     <div class="nav-incident">
       <div style="color: white">KMITL's Traffic Anomaly Detection</div>
       <hr style="margin: 15px 0" />
-      <span style="color: white">Result</span>
+      <div style="color: white; width: 100%">Road Number</div>
+      <select
+        v-model="roadNo"
+        name="roadNumber"
+        class="input-select"
+        style="width: 100%; margin: 10px 0"
+      >
+        <option value="">Show all</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="7">7</option>
+      </select>
+      <div style="color: white; width: 100%">Road Direction</div>
+      <select
+        v-model="roadDirection"
+        name="roadDirection"
+        class="input-select"
+        style="width: 100%; margin: 10px 0"
+      >
+        <option value="">Show all</option>
+        <option value="in">in</option>
+        <option value="out">out</option>
+      </select>
+      <div style="color: white">Result</div>
       <div class="incident-result">
         <div class="incident-result-item">
           <div
-            v-for="(item, index) in markersList"
+            v-for="(item, index) in incidentVal"
             :key="index"
             class="traffic-event-item"
           >
@@ -15,6 +38,7 @@
             <div class="jump-btn" @click="clickEvent(item, index)">Go</div>
           </div>
         </div>
+        <div class="middle-section" @click="loadMore">กดเพื่อโหลดเพิ่ม</div>
         <div class="bottom-section">
           <hr class="line" />
           <div class="total">
@@ -42,7 +66,7 @@
     </div>
     <longdo-map v-if="tap === 'real-time'" class="longdo-map" @load="onLoad">
       <longdo-map-marker
-        v-for="(item, i) in markersList"
+        v-for="(item, i) in incidentVal"
         :key="i"
         :location="item.location"
         :title="item.title"
@@ -51,8 +75,8 @@
         @add="addMarker"
       />
     </longdo-map>
-    <div v-else-if="tap === 'history'">
-      <twitter class="twitter-feed">
+    <div class="twitter-feed" style="width: 100%" v-else-if="tap === 'history'">
+      <twitter>
         <a
           class="twitter-timeline"
           href="https://twitter.com/js100radio?ref_src=twsrc%5Etfw"
@@ -65,6 +89,9 @@
 <script>
 import { LongdoMapMarker } from "longdo-map-vue";
 import axios from "axios";
+import dayjs from "dayjs";
+var utc = require("dayjs/plugin/utc");
+dayjs.extend(utc);
 export default {
   name: "App",
   components: { LongdoMapMarker },
@@ -106,30 +133,58 @@ export default {
       markersfn: [],
       markersList: [],
       tap: "real-time",
+      anomalyAmount: 20,
+      roadNo: "",
+      roadDirection: "",
     };
+  },
+  computed: {
+    incidentVal() {
+      let dataArr = this.markersList;
+      if (this.roadNo) {
+        dataArr = dataArr.filter((item) => {
+          return item.roadNo === parseInt(this.roadNo);
+        });
+      }
+      if (this.roadDirection) {
+        dataArr = dataArr.filter((item) => {
+          return item.roadDirection === this.roadDirection;
+        });
+      }
+      return dataArr;
+    },
   },
   mounted() {
     this.fetchIncident();
-    console.log();
   },
   methods: {
     async fetchIncident() {
-      const res = await axios.get(process.env.VUE_APP_BACKEND);
+      const res = await axios.get(
+        `${process.env.VUE_APP_BACKEND}/bydate/${this.anomalyAmount}`
+      );
       const incidentList = res.data.map((item) => {
         return {
+          roadNo: item.road_no,
+          roadDirection: item.direction,
           location: {
             lon: item.lon,
             lat: item.lat,
           },
-          title: `ความผิดปกติถนนหมายเลข ${item.road_no} กม. ${item.km}`,
+          title: `ความผิดปกติถนนหมายเลข ${item.road_no} กม. ${item.km} ${
+            item.direction === "in" ? "ขาเข้า" : "ขาออก"
+          }`,
           detail: `เกิดความผิดปกติของการจราจรบนถนนหมายเลข ${
             item.road_no
           } หลักกิโลเมตรที่ ${item.km} ${
             item.direction === "in" ? "ขาเข้า" : "ขาออก"
           } ความเร็วรถเฉลี่ย ${item.avg_speed} km/hr`,
+          dateTime: dayjs(dayjs(item.date_time).format())
+            .utc()
+            .format("DD/MM/YYYY h:mm A"),
         };
       });
       this.markersList = incidentList;
+      // console.log(this.markersList);
     },
     onLoad(map) {
       map.location(this.markers[0].location);
@@ -141,7 +196,7 @@ export default {
       this.markersfn.push(marker);
     },
     clickMarker() {
-      console.log("event");
+      // console.log("event");
     },
     clickEvent(item, index) {
       this.map.location(item.location);
@@ -149,7 +204,11 @@ export default {
       setTimeout(() => {
         this.markersfn[index].pop();
       }, 500);
-      console.log(this.markersfn);
+      // console.log(this.markersfn);
+    },
+    loadMore() {
+      this.anomalyAmount += 10;
+      this.fetchIncident();
     },
   },
 };
@@ -182,12 +241,13 @@ export default {
 .incident-result {
   padding: 0 10px;
   margin-top: 10px;
-  height: 80%;
+  height: 70%;
   background: #414bb1;
   border-radius: 10px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  // justify-content: space-between;
+  overflow: auto;
 }
 .jump-btn {
   background-color: #828ef2;
@@ -201,6 +261,16 @@ export default {
   color: #868ef2;
   border-color: #868ef2;
   width: 100%;
+}
+.middle-section {
+  display: flex;
+  color: white;
+  margin-top: 10px;
+  justify-content: center;
+  background: #868ef2;
+  border-radius: 10px;
+  box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+  cursor: pointer;
 }
 .bottom-section {
   margin-bottom: 20px;

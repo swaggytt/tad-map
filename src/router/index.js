@@ -1,6 +1,6 @@
 import Vue from "vue";
 import VueRouter from "vue-router";
-import Home from "../views/Home.vue";
+// import Home from "../views/Home.vue";
 import twitter from "vue-twitter";
 
 Vue.use(VueRouter);
@@ -9,8 +9,8 @@ Vue.use(twitter);
 const routes = [
   {
     path: "/",
-    name: "Home",
-    component: Home,
+    name: "Landing",
+    component: () => import("../views/Landing.vue"),
   },
   {
     path: "/about",
