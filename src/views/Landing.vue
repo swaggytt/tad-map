@@ -172,12 +172,16 @@ export default {
           },
           title: `ความผิดปกติถนนหมายเลข ${item.road_no} กม. ${item.km} ${
             item.direction === "in" ? "ขาเข้า" : "ขาออก"
-          }`,
+          } `,
           detail: `เกิดความผิดปกติของการจราจรบนถนนหมายเลข ${
             item.road_no
           } หลักกิโลเมตรที่ ${item.km} ${
             item.direction === "in" ? "ขาเข้า" : "ขาออก"
-          } ความเร็วรถเฉลี่ย ${item.avg_speed} km/hr`,
+          } ความเร็วรถเฉลี่ย ${item.avg_speed} km/hr <br>${dayjs(
+            dayjs(item.date_time).format()
+          )
+            .utc()
+            .format("DD/MM/YYYY h:mm A")}`,
           dateTime: dayjs(dayjs(item.date_time).format())
             .utc()
             .format("DD/MM/YYYY h:mm A"),
